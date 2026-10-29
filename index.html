@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Road to War: five places, one story</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+:root{--bg:#1b1612;--card:#2a211a;--ink:#f3e9d8;--gold:#e0a82e;--mut:#b9a98f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Georgia,serif}
+header{padding:12px 20px 4px}
+h1{font-size:1.15rem;margin:0;color:var(--gold)}
+#ctl{position:sticky;top:0;z-index:2000;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;padding:10px;background:#120e0bf2;border-bottom:1px solid #5a4a37}
+nav{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+button,.btn{font:inherit;font-size:.92rem;background:var(--card);color:var(--ink);border:1px solid #5a4a37;border-radius:8px;padding:8px 12px;cursor:pointer;text-decoration:none;display:inline-block}
+button[aria-current=true]{background:var(--gold);color:#1b1612;border-color:var(--gold);font-weight:bold}
+.big{font-size:1.05rem;font-weight:bold;padding:10px 18px;background:var(--gold);color:#1b1612;border-color:var(--gold)}
+button:disabled{opacity:.35;cursor:default}
+#stage{display:grid;gap:0}
+@media(min-width:900px){#stage{grid-template-columns:1fr 1fr}}
+#map{height:min(40vh,480px);background:#10201c;color:var(--mut);padding:10px}
+@media(min-width:900px){#map{height:min(58vh,480px)}}
+#view{position:relative;height:min(46vh,480px);overflow:hidden;cursor:grab;touch-action:pan-y;background:#000}
+@media(min-width:900px){#view{height:min(58vh,480px)}}
+#view svg{display:block;height:100%;max-width:none}
+.pin{background:var(--gold);color:#1b1612;border:2px solid #fff;border-radius:50%;text-align:center;line-height:26px;font:bold 14px Georgia,serif}
+.pin.on{background:#fff;color:#b8860b;transform:scale(1.25)}
+.bar{display:flex;align-items:center;justify-content:center;gap:14px;padding:8px;color:var(--mut);font-size:.9rem}
+main{max-width:780px;margin:0 auto;padding:0 20px 24px}
+h2{color:var(--gold);margin:.3em 0 .1em}
+.tag{color:var(--gold);font-size:.85rem;margin:1em 0 0;text-transform:uppercase;letter-spacing:.04em}
+.d{color:var(--mut);font-style:italic;margin:0 0 1em}
+li{margin-bottom:.5em}
+.box{border-left:4px solid var(--gold);background:var(--card);padding:10px 14px;margin:14px 0;border-radius:6px}
+.links{display:flex;gap:10px;flex-wrap:wrap;margin-top:1.2em}
+footer{max-width:780px;margin:0 auto;padding:0 20px 40px;color:var(--mut);font-size:.85rem}
+@keyframes walk{from{transform:translateX(-500px)}to{transform:translateX(2900px)}}
+@keyframes bob{50%{transform:translateY(-7px)}}
+@keyframes glint{0%,100%{opacity:.15;transform:scale(.5)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes swing{50%{transform:rotate(-40deg)}}
+@keyframes dust{from{opacity:.7;transform:translate(0,0) scale(.5)}to{opacity:0;transform:translate(-70px,-30px) scale(2.2)}}
+@keyframes drift{to{transform:translateX(220px)}}
+@keyframes rise{from{transform:translateY(80px)}to{transform:none}}
+.walk{animation:walk 60s linear infinite}
+.bob{animation:bob .45s ease-in-out infinite}
+.glint,.swing,.dust{transform-box:fill-box;transform-origin:center}
+.glint{animation:glint 1.4s infinite}
+.swing{transform-origin:bottom center;animation:swing 1s ease-in-out infinite}
+.dust{animation:dust 2.2s ease-out infinite}
+.drift{animation:drift 16s ease-in-out infinite alternate}
+.rise{animation:rise 5s ease-out both}
+#view:not(.drag) #pano{transition:transform 1.4s ease}
+#cap{position:absolute;left:0;right:0;bottom:0;padding:10px 14px;background:rgba(18,14,11,.85);color:#fff;font-size:.95rem;pointer-events:none}
+li.on,p.e.on{background:#3a2d20;border-left:3px solid var(--gold);padding:4px 8px}
+.gal{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+figure{margin:0;background:var(--card);border-radius:8px;overflow:hidden}figure img{width:100%;display:block}figcaption{padding:8px 10px;font-size:.85rem;color:var(--mut)}
+.vid{position:relative;padding-top:56.25%}.vid iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.opts{display:flex;flex-direction:column;gap:6px;margin:6px 0}.opts button{text-align:left}
+.opts .ok{background:#2e5b2e;border-color:#6fbf6f}.opts .no{background:#6b2a2a;border-color:#d06a6a}
+.fb{color:var(--mut);margin:4px 0 14px}#score{color:var(--mut);font-size:.85rem;margin-left:14px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style></head><body>
+<header><h1 style="display:inline">Road to War: five places, one story</h1><span id="score"></span></header>
+<div id="ctl"><button class="big" id="prev">&#9664; Previous place</button><nav id="nav"></nav><button class="big" id="next">Next place &#9654;</button><button id="play">&#9654; Play tour</button></div>
+<div id="stage"><div id="map"></div><div><div id="view" role="img" tabindex="0"></div><div class="bar"><button id="sprev" class="big">&#9664; Step</button><span id="stepn"></span><button id="snext" class="big">Next step &#9654;</button></div><div class="bar"><button id="L" aria-label="Look left">&#9664;</button><span>Drag the scene to look around</span><button id="R" aria-label="Look right">&#9654;</button></div></div></div>
+<main id="card"></main>
+<footer>The map is satellite imagery of the real places (the route links the five areas in the order the events happened). The scenes are illustrations drawn for this tour, not photographs. For the real Google Earth, use the buttons under each stop.</footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const u=(id,x,y,s=1,c='#6b5a45',k='')=>`<g transform="translate(${x} ${y}) scale(${s})"><use href="#${id}" class="${k}" style="color:${c}"/></g>`;
+const walk=(d,dl,inner)=>`<g class="walk" style="animation-duration:${d}s;animation-delay:-${dl}s">${inner}</g>`;
+const spark=(x,y,d)=>`<path class="glint" style="animation-delay:${d}s" d="M${x} ${y-12}L${x+3} ${y-3}L${x+12} ${y}L${x+3} ${y+3}L${x} ${y+12}L${x-3} ${y+3}L${x-12} ${y}L${x-3} ${y-3}Z" fill="#ffd84a"/>`;
+const pick=(x,y,d)=>`<g transform="translate(${x} ${y})"><g class="swing" style="animation-delay:${d}s"><path d="M0 0L16-30M8-32L26-26" stroke="#5a3a1e" stroke-width="3" fill="none"/></g></g>`;
+const rider=(x,y,s,c)=>`<g transform="translate(${x} ${y}) scale(${s})"><g class="bob"><use href="#h" style="color:#4a2f1b"/><g transform="translate(-2 -34) scale(.95)"><use href="#p" style="color:${c}"/></g></g></g>`;
+const puff=(x,y,r,d)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="#eee" opacity=".6" class="dust" style="animation-delay:${d}s"/>`;
+const defs=`<defs>
+<g id="p"><path d="M-5-22L-9-10M5-22L9-10" stroke="currentColor" stroke-width="3" fill="none"/><path d="M-7 0L-5-24H5L7 0Z" fill="currentColor"/><circle cy="-30" r="5" fill="#d9a67a"/><ellipse cy="-34" rx="9" ry="2.2" fill="#3b2a1c"/><path d="M-5-34Q0-45 5-34Z" fill="#3b2a1c"/></g>
+<g id="q"><use href="#p"/><path d="M5-22L11-42" stroke="currentColor" stroke-width="3" fill="none"/><circle cx="11" cy="-44" r="3.5" fill="#ffd84a"/></g>
+<g id="h"><ellipse cy="-30" rx="26" ry="11" fill="currentColor"/><path d="M18-34L33-54L42-48L30-28Z" fill="currentColor"/><path d="M-18-24L-24 0M-8-22L-10 0M10-22L14 0M20-24L28-2M-26-34Q-38-30-36-14" stroke="currentColor" stroke-width="4" fill="none"/></g></defs>`;
+const base=(a,b,hill,gr,sx)=>`<defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="2400" height="500" fill="url(#sk)"/><circle cx="${sx}" cy="120" r="46" fill="#ffe3a0" opacity=".85"/><path d="M0 340Q300 280 600 330T1200 320T1800 305T2400 330V500H0Z" fill="${hill}"/><rect y="385" width="2400" height="115" fill="${gr}"/>`;
+const cols=['#4a5a7a','#7a4a4a','#5a6b3a','#6e5a3a','#3a3a4a','#8a6a2a'];
+const crowd=(n,y,sc)=>Array.from({length:n},(_,i)=>u('p',i*58+(i%2)*10,y+(i%3)*6,sc+(i%2)*.1,cols[i%6])+(i%2?`<rect x="${i*58+18}" y="${y-34}" width="16" height="14" fill="#8a6a3a"/>`:'')).join('');
+
+const s1=()=>base('#f2b870','#fbe3b4','#9b7b52','#b08c5a',520)+
+`<rect x="330" y="335" width="130" height="60" fill="#efe3c8"/><path d="M318 338L395 292L472 338Z" fill="#8a6a3a"/><rect x="385" y="360" width="22" height="35" fill="#5a3a1e"/>
+<path d="M650 395L712 335L774 395Z" fill="#e7dcc4"/><path d="M1650 395L1715 330L1780 395Z" fill="#e7dcc4"/><circle cx="1900" cy="428" r="9" fill="#ff8a2a" class="glint"/>
+<path d="M1020 400L1060 335L1120 348L1170 315L1250 344L1300 330L1345 400Z" fill="#6b5e50"/><path d="M1070 372L1180 350L1290 370" stroke="#e0a82e" stroke-width="5" fill="none"/>`+
+u('p',1000,445,1.6,'#6e4a2a')+u('p',1075,462,1.7,'#3c5a73')+u('q',1200,448,1.9,'#8b3a2a','bob')+spark(1234,372,0)+spark(1262,392,.5)+spark(1212,356,.9)+u('p',1340,452,1.6,'#556b3a')+u('p',1400,444,1.55,'#7a6a55')+pick(1086,436,0)+pick(1356,428,.4)+
+walk(75,12,u('p',0,472,1.7,'#5a4a3a')+u('p',70,478,1.75,'#6b3a3a')+u('p',140,472,1.7,'#3a4a6b'));
+
+const s2=()=>base('#cfc3b0','#eee1c8','#a08a6a','#b9a07a',1900)+
+[[200,150,'#d9c7a3','#8f9aa3'],[380,120,'#c9b48c','#7d8790'],[540,170,'#e1d2b0','#8f9aa3'],[740,130,'#cdb890','#7d8790'],[1100,160,'#d9c7a3','#8f9aa3'],[1300,140,'#c9b48c','#7d8790']].map(([x,w,c,r])=>`<rect x="${x}" y="300" width="${w}" height="95" fill="${c}"/><path d="M${x-8} 302L${x+w/2} 270L${x+w+8} 302Z" fill="${r}"/><rect x="${x+w/2-10}" y="345" width="20" height="50" fill="#5a3a1e"/>`).join('')+
+`<rect x="560" y="222" width="250" height="38" fill="#3b2a1c"/><text x="685" y="250" text-anchor="middle" font-size="24" font-family="Georgia,serif" fill="#e0a82e">JOHANNESBURG</text>
+<rect x="1880" y="205" width="26" height="190" fill="#6b4a3a"/><rect x="1820" y="335" width="150" height="60" fill="#7d6a55"/>`+puff(1893,195,14,0)+puff(1893,195,14,1.1)+
+walk(48,2,crowd(9,455,1.6))+walk(62,30,crowd(7,472,1.7))+walk(75,50,crowd(10,445,1.5))+
+walk(95,25,`<g transform="translate(0 440)"><rect y="-70" width="150" height="34" fill="#7a5a34"/><path d="M0-70Q75-130 150-70Z" fill="#e9e0cc"/><circle cx="25" cy="-12" r="24" fill="none" stroke="#3b2a1c" stroke-width="5"/><circle cx="125" cy="-12" r="24" fill="none" stroke="#3b2a1c" stroke-width="5"/><rect x="40" y="-88" width="70" height="18" fill="#c9a26a"/><text x="75" y="-75" text-anchor="middle" font-size="11" fill="#3b2a1c" font-family="Georgia,serif">DYNAMITE</text></g>`+u('h',200,440,1.3,'#6b4a30')+u('h',275,440,1.3,'#5b3a22'))+
+u('p',1520,462,1.9,'#4a3a2a')+`<path d="M1534 440V366" stroke="#5a3a1e" stroke-width="4"/><rect x="1480" y="332" width="108" height="42" fill="#f3e9d8"/><text x="1534" y="350" text-anchor="middle" font-size="13" fill="#3b2a1c" font-family="Georgia,serif">VOTES FOR</text><text x="1534" y="366" text-anchor="middle" font-size="13" fill="#3b2a1c" font-family="Georgia,serif">UITLANDERS</text>`;
+
+const s3=()=>base('#e89a58','#f6d3a0','#a8845a','#b8935f',1700)+
+`<path d="M240 400V250M225 262H255M700 400V250M685 262H715M1000 400V250M985 262H1015" stroke="#3b2a1c" stroke-width="5"/><path d="M240 262Q470 300 700 262Q760 330 800 395M1000 262Q960 330 930 382" stroke="#2a1f14" stroke-width="2" fill="none"/>
+<ellipse cx="1130" cy="418" rx="70" ry="14" fill="none" stroke="#6b5e50" stroke-width="8"/>
+<path d="M1250 400L1330 322L1420 300L1520 318L1600 296L1700 330L1780 400Z" fill="#7a6248"/>
+<path d="M1700 310V222" stroke="#3b2a1c" stroke-width="3"/><rect x="1702" y="222" width="9" height="42" fill="#2e7d32"/><rect x="1711" y="222" width="48" height="14" fill="#c62828"/><rect x="1711" y="236" width="48" height="14" fill="#f5f5f5"/><rect x="1711" y="250" width="48" height="14" fill="#1e4fa3"/>`+
+[[1380,318],[1470,314],[1560,308],[1640,318]].map(([x,y])=>u('p',x,y,1.3,'#6b5a3a')+`<path d="M${x+2} ${y-34}L${x+34} ${y-22}" stroke="#2a1f14" stroke-width="3"/>`).join('')+puff(1420,282,9,0)+puff(1600,276,9,.9)+
+walk(22,4,puff(-40,470,14,0)+puff(-90,476,16,.7)+rider(0,470,1.7,'#6b5a3a')+rider(120,480,1.75,'#4a5a3a')+rider(250,468,1.7,'#6b5a3a')+rider(370,482,1.75,'#3a4a5a')+rider(500,472,1.7,'#6b5a3a'));
+
+
+const defs2=defs.replace('</defs>','<g id="g"><path d="M0-14L38-24" stroke="currentColor" stroke-width="7"/><circle cy="-12" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M-4 0L26-10" stroke="currentColor" stroke-width="3"/></g></defs>');
+const troops=(n,x0,y)=>Array.from({length:n},(_,i)=>u('p',x0-i*52,y+(i%2)*8,1.6,'#b8a36a')).join('');
+const flag=(x,y)=>`<path d="M${x} ${y+90}V${y}" stroke="#3b2a1c" stroke-width="3"/><g transform="translate(${x} ${y})"><rect x="2" width="56" height="34" fill="#1f3a8a"/><path d="M2 0L58 34M58 0L2 34" stroke="#fff" stroke-width="6"/><path d="M30 0V34M2 17H58" stroke="#fff" stroke-width="11"/><path d="M30 0V34M2 17H58" stroke="#c62828" stroke-width="5"/></g>`;
+const s4=()=>base('#8fa3b3','#d5dde0','#6f7f86','#8a8f6a',300)+
+`<path d="M200 400L420 268L650 400Z" fill="#59604c"/><path d="M1900 400L2060 262L2260 400Z" fill="#59604c"/><path d="M700 400L900 300L1000 205H1420L1560 300L1760 400Z" fill="#6b6e55"/><path d="M1030 216H1400" stroke="#3b3a2a" stroke-width="7"/>`+
+[0,1,2,3,4].map(i=>u('p',900+i*24,296-i*18,1.1,'#b8a36a','bob')).join('')+
+[0,1,2,3,4,5].map(i=>u('p',1050+i*60,208,1.2,'#b8a36a')).join('')+
+u('p',415,274,1.4,'#5a4a30')+u('p',2056,268,1.4,'#5a4a30')+u('p',455,296,1.3,'#5a4a30')+
+`<path d="M418 242L450 230M2054 236L2022 224" stroke="#2a1f14" stroke-width="3"/>`+
+puff(452,228,8,0)+puff(2020,222,8,.8)+puff(470,230,7,1.5)+puff(1200,190,10,.4)+
+`<g class="drift"><ellipse cx="700" cy="330" rx="260" ry="26" fill="#fff" opacity=".4"/><ellipse cx="1500" cy="300" rx="300" ry="30" fill="#fff" opacity=".4"/></g><g class="drift" style="animation-delay:-6s"><ellipse cx="1100" cy="360" rx="320" ry="28" fill="#fff" opacity=".35"/></g>`;
+const s5=()=>base('#f0c27a','#fbe6b8','#b59a62','#c2a66a',400)+
+`<path d="M0 420Q300 400 600 425T1200 418T1800 428T2400 415V470Q2100 480 1800 474T1200 466T600 478T0 466Z" fill="#4f86a8"/>`+
+[[860,424],[980,430],[1100,426],[1220,432]].map(([x,y])=>`<rect x="${x}" y="${y-34}" width="70" height="20" fill="#7a5a34"/><path d="M${x} ${y-34}Q${x+35} ${y-72} ${x+70} ${y-34}Z" fill="#e9e0cc"/><circle cx="${x+16}" cy="${y-10}" r="10" fill="none" stroke="#3b2a1c" stroke-width="3"/><circle cx="${x+54}" cy="${y-10}" r="10" fill="none" stroke="#3b2a1c" stroke-width="3"/>`).join('')+
+[920,1040,1160,1280].map((x,i)=>u('p',x,452+(i%2)*8,1.4,'#5a4a30')).join('')+
+[200,280,360,440,520,1600,1680,1760,1840,1920].map(x=>u('p',x,404,1.3,'#b8a36a')).join('')+
+u('g',420,494,1.9,'#2a2a2a')+u('g',1700,494,1.9,'#2a2a2a')+puff(470,455,12,0)+puff(1750,455,12,.9)+
+spark(960,330,0)+spark(1100,350,.6)+spark(1220,320,1.1)+
+`<path d="M1330 424V336" stroke="#3b2a1c" stroke-width="3"/><rect x="1332" y="336" width="44" height="28" fill="#fff" class="glint"/>`;
+const s6=()=>base('#bcd3e6','#f1e8d4','#8fa17a','#b3a07a',420)+
+`<path d="M740 272H1420L1380 236H780Z" fill="#7d6a55"/><rect x="760" y="272" width="640" height="123" fill="#efe3c8"/><path d="M980 272L1080 212L1180 272Z" fill="#e6d8b8"/>`+
+Array.from({length:6},(_,i)=>`<rect x="${905+i*50}" y="288" width="14" height="107" fill="#fff8e6"/>`).join('')+
+[790,840,1290,1340].map(x=>`<rect x="${x}" y="300" width="28" height="50" fill="#3b4a5a"/>`).join('')+
+`<rect x="1062" y="345" width="36" height="50" fill="#5a3a1e"/><g class="rise">${flag(1080,122)}</g>`+
+walk(32,4,rider(0,468,1.7,'#b8a36a')+rider(90,474,1.7,'#b8a36a')+troops(9,-70,462))+walk(32,20,troops(8,0,480));
+const s7=()=>base('#9fc3e0','#f4ead2','#a79a7c','#bba682',300)+
+`<rect x="330" y="290" width="520" height="105" fill="#e6d8b8"/><rect x="540" y="215" width="100" height="180" fill="#ddcca6"/><path d="M525 217L590 160L655 217Z" fill="#6b5a45"/><circle cx="590" cy="252" r="16" fill="#fff"/><path d="M590 252V242M590 252L598 256" stroke="#222" stroke-width="2"/><rect x="572" y="335" width="36" height="60" fill="#5a3a1e"/>`+
+[360,420,470,700,750,800].map(x=>`<rect x="${x}" y="315" width="26" height="46" fill="#3b4a5a"/>`).join('')+
+[1500,1640,1780].map(x=>`<rect x="${x}" y="300" width="120" height="95" fill="#d9c7a3"/><path d="M${x-6} 302L${x+60} 270L${x+126} 302Z" fill="#8f9aa3"/>`).join('')+
+`<g class="rise">${flag(1250,130)}</g>`+
+u('q',1190,460,1.7,'#b8a36a')+u('q',1290,466,1.7,'#b8a36a')+u('q',1340,458,1.7,'#b8a36a')+
+[1900,1960,2020].map((x,i)=>u('p',x,470+i*4,1.6,cols[i])).join('')+
+walk(38,8,u('h',0,470,1.4,'#6b4a30')+u('h',-85,470,1.4,'#5b3a22')+u('g',-190,482,1.9,'#2a2a2a')+troops(6,-300,466));
+
+const SC={s1,s2,s3,s4,s5,s6,s7};
+const A=[["Gold and the Jameson Raid", "1886 to 1896", [-26.2, 27.9], "Gold & Raid"], ["Spion Kop", "January 1900", [-28.6, 29.52], "Spion Kop"], ["Paardeberg", "February 1900", [-28.99083, 25.07528], "Paardeberg"], ["Bloemfontein", "March 1900", [-29.119, 26.2135], "Bloemfontein"], ["Pretoria", "June 1900", [-25.7461, 28.1881], "Pretoria"]],S=[{"a": 0, "sc": "s1", "f": 0.5, "la": -26.2, "lo": 27.99, "z": 12, "doc": "Area 1", "t": "Langlaagte, Witwatersrand: gold is discovered", "d": "1886", "c": "prospectors at the reef", "b": ["The discovery of gold in the Witwatersrand resulted in British flooding into the Transvaal in a desperate attempt to gain control over the minerals.", "The mineral revolution shifted the balance of power. The Transvaal was initially agricultural land, but the focus quickly shifted, turning it into an international imperial competition.", "Britain didn’t want any other European power to gain influence over the mineral wealth first.", "The competition for mineral wealth set the stage for conflict."], "task": "Explain TWO ways in which the discovery of gold changed the Transvaal.", "conn": "Gold made the Transvaal a prize. Next, the newcomers who rushed in to mine it: the Uitlanders.", "m": [{"t": "v", "id": "Kob5Z8v_Y3Y", "s": 12, "c": "Video from your document (starts at 0:12)."}, {"t": "i", "u": "https://upload.wikimedia.org/wikipedia/commons/d/df/Johannesburg_Gold_Fields_1902.jpg", "c": "Johannesburg Gold Fields, 1902. Source: Wikimedia Commons (check the licence on the file page)."}, {"t": "l", "u": "https://www.worldhistory.org/image/21810/witwatersrand-gold/", "c": "Witwatersrand gold: image source"}]}, {"a": 0, "sc": "s2", "f": 0.55, "la": -26.2041, "lo": 28.0473, "z": 12, "doc": "Area 1", "t": "Johannesburg: the influx of Uitlanders", "d": "Late 1880s to 1895", "c": "newcomers pour into the boom town", "i": "The number of Uitlanders in the ZAR kept increasing. What they wanted:", "b": ["Modern infrastructure, including better transport, water and sewage systems suitable for a capitalist economy.", "An end to the Boer monopoly over the supply of dynamite and other mining equipment.", "Political representation: they paid high taxes but had no vote.", "The right to vote without having to wait 14 years."], "e": "Cecil Rhodes, Prime Minister of the Cape, saw these grievances as a perfect opportunity to take over the ZAR, planning to use the complaints to justify it.", "task": "Who were the Uitlanders, and why did their demands create tension with the ZAR government?", "conn": "Rhodes planned to use these grievances. That plan became the Jameson Raid."}, {"a": 0, "sc": "s3", "f": 0.6, "la": -26.23278, "lo": 27.78333, "z": 12, "doc": "Area 1", "t": "Doornkop: the Jameson Raid", "d": "29 December 1895 to 2 January 1896", "c": "raiders meet Kruger’s commandos", "b": ["Pitsani, on the border of Bechuanaland, was the base of a force of mounted police under Dr Jameson.", "Uitlanders smuggled guns into Johannesburg, preparing for an uprising, but then decided not to revolt.", "Rhodes sent messages telling Jameson not to invade, but the telegraph line had been cut.", "Jameson saw a chance to gain fame and ignored Rhodes’s order.", "Kruger’s commandos easily captured the invaders at Doornkop."], "e": "Aftermath: Rhodes felt humiliated and resigned as Prime Minister of the Cape. Britain’s fears of a Boer-German alliance grew when the German Kaiser sent Kruger a congratulatory telegram, and tensions rose further when the ZAR bought modern weapons from Germany. War broke out in October 1899.", "task": "Explain how Cecil John Rhodes’s imperial ambitions were connected to the Jameson Raid.", "conn": "War came in October 1899. By January 1900 the fighting had reached Natal, where the British tried to break through at Spion Kop.", "m": [{"t": "v", "id": "PK8AW2H7IGE", "s": 109, "c": "Video from your document (starts at 1:49)."}], "qz": [{"q": "Why were the Uitlanders unhappy with politics in the ZAR?", "o": ["They were banned from mining gold", "They paid high taxes but had no vote", "They wanted to go back to Europe"], "a": 1, "w": "They paid high taxes yet had to wait 14 years for the vote."}, {"q": "Why did Britain want control of the Transvaal’s mineral wealth?", "o": ["To make sure no other European power gained influence over it first", "To turn the mines back into farmland", "To hand the gold to the Boers"], "a": 0, "w": "Britain did not want a rival European power to gain influence over the gold."}, {"q": "Why did the Jameson Raid fail?", "o": ["Jameson’s force captured Pretoria but was ordered back", "Rhodes led the raid himself and was defeated", "The Uitlanders did not revolt and Kruger’s commandos captured the raiders"], "a": 2, "w": "No uprising came, and Kruger’s commandos easily captured the invaders at Doornkop."}]}, {"a": 1, "sc": "s4", "f": 0.5, "la": -28.6, "lo": 29.52, "z": 12, "doc": "Area 4", "t": "Spion Kop: capturing a hill is not holding it", "d": "23 to 24 January 1900", "c": "British troops on the summit, Boers firing from the surrounding hills", "b": ["British troops climbed Spion Kop in the dark and the mist and occupied the summit in the early hours of 23 January 1900.", "They did not fully realise how exposed they were. Higher ground nearby let Boer forces fire onto the summit.", "The rocky ground made it hard to dig deep trenches, so the soldiers had only shallow cover.", "Lieutenant Colonel Thorneycroft’s letter of 24 January describes the lack of water and ammunition and the heavy casualties.", "The British withdrew and the Boers took control of the hill again."], "task": "Capturing a position and holding it are two different things. Explain why, using the terrain.", "conn": "After setbacks like this, the main British army under Lord Roberts advanced into the Free State. In February it trapped General Cronjé at Paardeberg.", "m": [{"t": "i", "u": "img/spion-hill.jpg", "c": "British troops heading to Spion Kop, 23 January 1900. Source in your document: BritishBattles.com."}, {"t": "i", "u": "img/spion-trench.jpg", "c": "British soldiers in a shallow trench. Source in your document: The Observation Post (samilhistory.com)."}, {"t": "i", "u": "img/spion-letter.jpg", "c": "Lieutenant Colonel Thorneycroft’s letter of 24 January 1900. Source in your document: The National Archives (UK)."}, {"t": "i", "u": "img/spion-painting.jpg", "c": "Painting of the fighting at Spion Kop. Add the artist and source."}, {"t": "i", "u": "img/spion-terrain.jpg", "c": "The hilly terrain around Spion Kop. Add the photographer credit."}, {"t": "l", "u": "https://www.britishbattles.com/great-boer-war/battle-of-spion-kop/", "c": "BritishBattles.com"}, {"t": "l", "u": "https://cdn.nationalarchives.gov.uk/documents/education/the-south-african-war.pdf", "c": "National Archives: the South African War"}], "qz": [{"q": "What made the summit of Spion Kop so dangerous for the British?", "o": ["The British never reached the summit", "The summit was too flat to defend", "Higher ground nearby let Boers fire onto it, and the rocky ground allowed only shallow trenches"], "a": 2, "w": "They held the summit but were exposed to fire from the surrounding heights."}, {"q": "What does Spion Kop teach us?", "o": ["Capturing a position and holding it are two different things", "High ground always wins a battle", "Fighting in mist is always safe"], "a": 0, "w": "The British reached the summit but could not defend it."}]}, {"a": 2, "sc": "s5", "f": 0.45, "la": -28.99083, "lo": 25.07528, "z": 12, "doc": "Area 3", "t": "Paardeberg: the surrender of General Cronjé", "d": "18 to 27 February 1900", "c": "the British ring around Cronjé’s wagons on the Modder River", "b": ["General Piet Cronjé and his Boer troops were withdrawing after the British moved toward Kimberley.", "British soldiers stopped Cronjé’s army near the Modder River in the Orange Free State.", "Cronjé decided to defend his position rather than abandon his wagons and supplies.", "The British surrounded his forces and attacked them. After days of fighting and bombardment, Cronjé surrendered to Lord Roberts on 27 February 1900, and many Boer soldiers were taken prisoner.", "It was a significant British victory and showed how the terrain influenced military operations."], "task": "In which year did the Battle of Paardeberg take place? Name the Boer general who surrendered. State the results of the British victory.", "conn": "With Cronjé beaten, the road to the Free State capital lay open. Lord Roberts’s army reached Bloemfontein on 13 March.", "m": [{"t": "v", "id": "RgyK7O3o0VI", "s": 0, "c": "Video from your document."}, {"t": "i", "u": "img/paardeberg-veld.jpg", "c": "Photograph from Area 3 of your document. Add the archive credit before submitting."}, {"t": "l", "u": "https://hdl.handle.net/10520/EJC161516", "c": "Smit and Janse van Rensburg (2014)"}], "qz": [{"q": "In which year did the Battle of Paardeberg take place?", "o": ["1990", "1899", "1900", "1902"], "a": 2, "w": "18 to 27 February 1900."}, {"q": "Which Boer general surrendered to Lord Roberts on 27 February?", "o": ["Piet Cronjé", "Louis Botha", "Paul Kruger"], "a": 0, "w": "General Piet Cronjé surrendered and many Boer soldiers were taken prisoner."}]}, {"a": 3, "sc": "s6", "f": 0.5, "la": -29.119, "lo": 26.2135, "z": 15, "doc": "Area 2", "t": "Bloemfontein: the Old Presidency becomes British headquarters", "d": "13 March 1900", "c": "British troops arrive and the flag goes up at the Old Presidency", "b": ["British forces occupied Bloemfontein on 13 March 1900, after the fighting at Paardeberg, Poplar Grove and Driefontein.", "The Old Presidency, built in the 1880s, had been the official residence of Orange Free State presidents.", "Lord Roberts and his officers used it as their military headquarters, and it became known as Government House.", "Why occupy the capital? For military strategy, for political control, and as a base to rest, gather supplies and prepare to advance on Pretoria. The army stayed for weeks, partly because of exhaustion and a typhoid epidemic.", "The building became a museum in 1984."], "task": "How did the British occupation change the meaning and use of the Old Presidency in 1900?", "conn": "After resting and resupplying, Roberts marched north. British troops entered Johannesburg on 31 May, the goldfield town from your first stop, and Pretoria fell on 5 June.", "m": [{"t": "i", "u": "img/bloem-troops.jpg", "c": "British troops entering Bloemfontein, March 1900. Source in your document: National Galleries of Scotland."}, {"t": "i", "u": "img/presidency-close.jpg", "c": "The Old Presidency today. Source in your document: South African History Online."}, {"t": "i", "u": "img/presidency-wide.jpg", "c": "The Old Presidency today (wider view). Compare it with the 1900 photograph: what has stayed the same?"}, {"t": "l", "u": "https://sahistory.org.za/place/old-presidency-museum-bloemfontein", "c": "SAHO: Old Presidency"}, {"t": "l", "u": "https://www.nationalgalleries.org/art-and-artists/76259/british-troops-entering-bloemfontein", "c": "National Galleries of Scotland"}], "qz": [{"q": "What became of the Old Presidency after 13 March 1900?", "o": ["It was burned down", "It became British military headquarters, known as Government House", "It became a school"], "a": 1, "w": "Lord Roberts and his officers used it as their headquarters."}, {"q": "Why did the British stay in Bloemfontein for several weeks?", "o": ["Boer forces blocked the road north", "The capital was being moved", "To rest, resupply and recover from exhaustion and a typhoid epidemic"], "a": 2, "w": "Bloemfontein became a base before the advance on Pretoria."}]}, {"a": 4, "sc": "s7", "f": 0.5, "la": -25.7461, "lo": 28.1881, "z": 15, "doc": "Area 5", "t": "Pretoria: the capital falls, but the war goes on", "d": "5 June 1900", "c": "British artillery crosses Church Square as the Union Jack goes up", "b": ["Pretoria, capital of the Transvaal (South African Republic), was occupied by British forces on 5 June 1900.", "Photographs from the time show British artillery crossing the public square at the head of Church Street.", "The Raadsaal on Church Square was linked to the government of the Transvaal Republic. Occupying it symbolised a change in control.", "But capturing the capital did not end the war. Boer forces continued with guerrilla warfare until the Treaty of Vereeniging on 31 May 1902.", "Think critically: a photograph shows only what the photographer chose to record. Whose victory is shown, and whose experience is missing?"], "task": "Exit ticket: why is “Pretoria fell, so the war ended” an inaccurate statement?", "conn": "Full circle: the British reached Pretoria through Johannesburg, the town built on the gold where this story began.", "m": [{"t": "l", "u": "https://www.nationalarchives.gov.za/node/2166383", "c": "Archive: raising the Union Jack, Pretoria"}, {"t": "l", "u": "https://collection.nam.ac.uk/detail.php?acc=1998-01-135-56", "c": "National Army Museum: Lord Roberts and staff"}, {"t": "l", "u": "https://sahistory.org.za/place/church-square-pretoria", "c": "SAHO: Church Square"}, {"t": "l", "u": "https://paperspast.natlib.govt.nz/newspapers/THS19000607.2.12.4", "c": "Thames Star, 7 June 1900: The Occupation of Pretoria"}], "qz": [{"q": "On what date was Pretoria occupied by British forces?", "o": ["13 March 1900", "5 June 1900", "31 May 1902"], "a": 1, "w": "5 June 1900."}, {"q": "Why is “Pretoria fell, so the war ended” inaccurate?", "o": ["The British left Pretoria straight away", "Cronjé’s surrender had already ended the war", "Boer forces fought on with guerrilla warfare until 1902"], "a": 2, "w": "The Treaty of Vereeniging was signed on 31 May 1902."}]}];
+const $=s=>document.querySelector(s),V=$('#view');let x=0,W=0,dr=null,cur=0,timer=0,M=null,pins=[];
+try{M=L.map('map',{scrollWheelZoom:false}).setView([-27.3,27.3],5);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:17,attribution:'Imagery &copy; Esri'}).addTo(M);
+L.polyline(A.map(a=>a[2]),{color:'#ffd84a',weight:3,dashArray:'8 8'}).addTo(M);
+pins=A.map((a,i)=>L.marker(a[2],{icon:L.divIcon({className:'pin',html:i+1,iconSize:[30,30]})}).addTo(M).bindTooltip(a[0]).on('click',()=>show(S.findIndex(s=>s.a==i))));}
+catch(e){$('#map').textContent='The map could not load. Use the Google Earth buttons below.'}
+const clamp=()=>{x=Math.max(Math.min(0,V.clientWidth-W),Math.min(0,x))};
+const size=()=>{const p=$('#pano');if(p){W=Math.max(V.clientHeight*4.8,V.clientWidth);p.style.width=W+'px'}};
+const place=()=>{const p=$('#pano');if(p)p.style.transform=`translateX(${x}px)`};
+let st=0,ans={};
+const items=()=>[...document.querySelectorAll('#card ul li,#card p.e')];
+function step(k){const it=items();if(!it.length)return;st=Math.max(0,Math.min(k,it.length-1));
+ it.forEach((e,j)=>e.classList.toggle('on',j==st));
+ const n=it.length,fx=S[cur].f+(n>1?(st/(n-1)-.5)*.36:0);
+ x=-(W*fx-V.clientWidth/2);clamp();place();
+ const c=$('#cap');if(c)c.textContent=it[st].textContent;$('#stepn').textContent='Step '+(st+1)+' of '+n}
+function adv(){if(st<items().length-1)step(st+1);else show(cur<S.length-1?cur+1:0)}
+const mh=m=>m.t=='v'?`<figure><div class="vid"><iframe src="https://www.youtube-nocookie.com/embed/${m.id}?start=${m.s}" title="${m.c}" loading="lazy" allowfullscreen></iframe></div><figcaption>${m.c} <a target="_blank" rel="noopener" href="https://youtu.be/${m.id}?t=${m.s}">Watch on YouTube</a></figcaption></figure>`:m.t=='i'?`<figure><img src="${m.u}" alt="${m.c}" loading="lazy" onerror="this.parentNode.remove()"><figcaption>${m.c}</figcaption></figure>`:`<a class="btn" target="_blank" rel="noopener" href="${m.u}">${m.c}</a>`;
+const media=s=>{const m=s.m||[];return m.length?`<h3>Photos, videos and sources</h3><div class="gal">${m.filter(a=>a.t!='l').map(mh).join('')}</div><p class="links">${m.filter(a=>a.t=='l').map(mh).join('')}</p>`:''};
+const quiz=i=>{const z=S[i].qz;if(!z)return'';return`<div class="box"><h3>Test yourself</h3>`+z.map((q,k)=>{const a=ans[i+'-'+k];return`<p><b>${k+1}. ${q.q}</b></p><div class="opts">`+q.o.map((o,j)=>`<button class="${a===undefined?'':j==q.a?'ok':j==a?'no':''}" data-k="${i}-${k}" data-j="${j}"${a===undefined?'':' disabled'}>${o}</button>`).join('')+`</div><p class="fb">${a===undefined?'':(a==q.a?'Correct. ':'Not quite. ')+q.w}</p>`}).join('')+`</div>`};
+const total=S.reduce((n,s)=>n+(s.qz?s.qz.length:0),0);
+const score=()=>{const k=Object.keys(ans);$('#score').textContent='Quiz: '+k.filter(id=>ans[id]==S[id.split('-')[0]].qz[id.split('-')[1]].a).length+' correct of '+k.length+' answered ('+total+' in all)'};
+function show(i){cur=i;const s=S[i];
+ V.innerHTML=`<svg id="pano" viewBox="0 0 2400 500" preserveAspectRatio="xMidYMid slice" aria-hidden="true">${defs2}${SC[s.sc]()}</svg><div id="cap"></div>`;
+ V.setAttribute('aria-label','Illustrated scene: '+s.c);
+ size();x=-(W*s.f-V.clientWidth/2);clamp();place();
+ [...$('#nav').children].forEach((b,j)=>b.setAttribute('aria-current',j==s.a));
+ pins.forEach((p,j)=>p._icon&&p._icon.classList.toggle('on',j==s.a));
+ if(M)M.flyTo([s.la,s.lo],s.z,{duration:2.5});
+ $('#prev').disabled=i==0;$('#next').disabled=i==S.length-1;
+ $('#card').innerHTML=`<p class="tag">Area ${s.a+1} of 5: ${A[s.a][0]} · ${A[s.a][1]} · Your document: ${s.doc}</p><h2>${s.t}</h2><p class="d">${s.d} · Illustration: ${s.c}</p>${s.i?`<p>${s.i}</p>`:''}<ul>${s.b.map(t=>`<li>${t}</li>`).join('')}</ul>${s.e?`<p class="e">${s.e}</p>`:''}<div class="box"><b>Your task:</b> ${s.task}</div><div class="box"><b>How this connects:</b> ${s.conn}</div>${media(s)}<div id="qz">${quiz(i)}</div><p class="links"><a class="btn" target="_blank" rel="noopener" href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${s.la},${s.lo}">See it today in Street View</a><a class="btn" target="_blank" rel="noopener" href="https://earth.google.com/web/@${s.la},${s.lo},1700a,6000d,35y,0h,45t,0r">Open in Google Earth</a><a class="btn" href="road-to-war-google-earth.kml" download>Download Google Earth file (all 5 areas)</a></p>`;
+ history.replaceState(null,'','#'+(i+1));step(0);score();}
+V.onpointerdown=e=>{dr=e.clientX-x;V.setPointerCapture(e.pointerId);V.style.cursor='grabbing';V.classList.add('drag')};
+V.onpointermove=e=>{if(dr!==null){x=e.clientX-dr;clamp();place()}};
+V.onpointerup=V.onpointercancel=()=>{dr=null;V.style.cursor='grab';V.classList.remove('drag')};
+const nudge=d=>{x+=d;clamp();place()};
+$('#L').onclick=()=>nudge(300);$('#R').onclick=()=>nudge(-300);
+V.onkeydown=e=>{if(e.key=='ArrowLeft')nudge(120);if(e.key=='ArrowRight')nudge(-120)};
+$('#prev').onclick=()=>show(cur-1);$('#next').onclick=()=>show(cur+1);
+$('#play').onclick=()=>{if(timer){clearInterval(timer);timer=0;$('#play').innerHTML='&#9654; Play tour'}else{timer=setInterval(()=>adv(),7000);$('#play').innerHTML='&#10074;&#10074; Pause tour'}};
+addEventListener('resize',()=>{size();clamp();place();if(M)M.invalidateSize()});
+A.forEach((a,i)=>{const b=document.createElement('button');b.textContent=(i+1)+' '+a[3];b.onclick=()=>show(S.findIndex(s=>s.a==i));$('#nav').append(b)});
+$('#snext').onclick=adv;$('#sprev').onclick=()=>{if(st>0)step(st-1);else if(cur>0){show(cur-1);step(items().length-1)}};
+$('#card').onclick=e=>{const b=e.target.closest('button[data-k]');if(!b)return;ans[b.dataset.k]=+b.dataset.j;$('#qz').innerHTML=quiz(cur);score()};
+show(Math.min(S.length-1,Math.max(0,(+location.hash.slice(1)||1)-1)));
+</script></body></html>
